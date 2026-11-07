@@ -529,25 +529,8 @@ export const WARMUPS: Record<Person, Partial<Record<DayKind, WarmupItem[]>>> = {
   },
 }
 
-export type CardioPlan = { label: string; hard?: boolean }
-export const EMILY_CARDIO: Record<DayId, CardioPlan> = {
-  pushA: { label: 'Intervals after lifting', hard: true },
-  pullA: { label: 'Easy run, 20–30 min' },
-  legs1: { label: 'Easy run or none' },
-  pushB: { label: 'Intervals after lifting', hard: true },
-  pullB: { label: 'Easy run' },
-  legs2: { label: 'Easy run or none' },
-}
-export const SUNDAY_CARDIO = 'Optional standalone intervals'
-
-export type CardioKind = 'int-8x1' | 'int-4x4' | 'int-10x30' | 'easy' | 'none'
-export const CARDIO_OPTIONS: { id: CardioKind; label: string; sprint?: boolean }[] = [
-  { id: 'int-4x4', label: '4 × (4 min hard / 3 min easy)' },
-  { id: 'int-8x1', label: '8 × (1 min hard / 2 min easy)' },
-  { id: 'int-10x30', label: '10 × (30 s sprint / 90 s walk)', sprint: true },
-  { id: 'easy', label: 'Easy run' },
-  { id: 'none', label: 'None today' },
-]
+/** What a cardio log records. Plan content lives in src/running.ts. */
+export type CardioKind = 'quality' | 'easy' | 'long' | 'cardio'
 
 export const PROGRAM_RULES = [
   'Hit all prescribed reps → add weight next time. Fail the same weight 3 sessions in a row → deload 10%.',
@@ -573,8 +556,8 @@ export const GLOBAL_NOTES: Record<Person, string[]> = {
 }
 
 export const HEALING_NOTES = [
-  'Healing mode: no AMRAP sets (last set is a normal set) and no hard intervals; easy runs only.',
-  'Turn it off once getting out of bed, coughing and sneezing have been pain-free for ~2 weeks. Then bring back AMRAP first, then full side planks, then 4×4 intervals, then sprints, one at a time.',
+  'Healing mode: no AMRAP sets (last set is a normal set). Cardio is incline walking only; the running plan waits.',
+  'Turn it off once getting out of bed, coughing and sneezing have been pain-free for ~2 weeks. Turning it off starts the running plan the next Monday (or resumes it where she paused).',
 ]
 
 export type DoctorBox = { title: string; items: string[]; urgent?: string[] }

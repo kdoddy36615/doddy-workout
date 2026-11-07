@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { evaluate, localDate, staleActive } from './logic'
+import { mondayOf, nextMonday, planState } from './running'
 import {
   EXERCISES,
   incrementFor,
@@ -175,14 +176,54 @@ export function useSetChoice(person: Person) {
   })
 }
 
+export type RunSettings = { run_week: number; run_start: string | null }
+
+/** Emily's place in the running plan. */
+export function useRunPlan(person: Person) {
+  return useQuery({
+    queryKey: ['runplan', person],
+    queryFn: async () => {
+      const rows = await must<RunSettings[]>(supabase.from('person_settings').select('run_week, run_start').eq('person', person))
+      return rows[0] ?? { run_week: 0, run_start: null }
+    },
+  })
+}
+
+/**
+ * Healing on: pause the running plan at the current week.
+ * Healing off: (re)start the plan the next Monday, at the paused week.
+ */
 export function useSetHealing() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (v: { person: Person; on: boolean }) => {
-      await must(supabase.from('person_settings').upsert({ person: v.person, healing_mode: v.on }))
+      const [row] = await must<RunSettings[]>(supabase.from('person_settings').select('run_week, run_start').eq('person', v.person))
+      const run = row ?? { run_week: 0, run_start: null }
+      let next: RunSettings = run
+      if (v.on && run.run_start) {
+        const st = planState(false, run.run_week, run.run_start, new Date())
+        next = { run_week: st.status === 'active' ? st.index : run.run_week, run_start: null }
+      } else if (!v.on && !run.run_start) {
+        next = { run_week: run.run_week, run_start: localDate(nextMonday(new Date())) }
+      }
+      await must(supabase.from('person_settings').upsert({ person: v.person, healing_mode: v.on, ...next }))
     },
     onMutate: (v) => qc.setQueryData<Partial<Record<Person, boolean>>>(['settings'], (old) => ({ ...old, [v.person]: v.on })),
     onError: () => qc.invalidateQueries({ queryKey: ['settings'] }),
+    onSettled: (_d, _e, v) => qc.invalidateQueries({ queryKey: ['runplan', v.person] }),
+  })
+}
+
+/** "Repeat this week": stay on the current week through next week too. */
+export function useRepeatRunWeek(person: Person) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (index: number) => {
+      const monday = mondayOf(new Date())
+      monday.setDate(monday.getDate() + 7)
+      await must(supabase.from('person_settings').update({ run_week: index, run_start: localDate(monday) }).eq('person', person))
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['runplan', person] }),
   })
 }
 

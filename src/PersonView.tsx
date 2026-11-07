@@ -1,11 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   startSession,
-  useCardio,
   useChoices,
   useFinish,
   useHealing,
-  useLogCardio,
   useLogSet,
   useSaveState,
   useSessions,
@@ -17,27 +15,23 @@ import {
   type SetLog,
 } from './db'
 import { ExerciseCard } from './ExerciseCard'
+import { RunPlan } from './RunPlan'
 import { isSunday, lastDates, localDate, nextDay } from './logic'
 import {
-  CARDIO_OPTIONS,
   DAYS,
   DOCTOR,
-  EMILY_CARDIO,
   GLOBAL_NOTES,
   HEALING_NOTES,
-  PERSON_NAME,
   PROGRAM_RULES,
   ROTATION,
-  SUNDAY_CARDIO,
   WARMUPS,
   pickVariant,
   slotsFor,
   stateKey,
-  type CardioKind,
   type DayId,
   type Person,
 } from './program'
-import { Disclosure, Media, Stepper, Warning } from './ui'
+import { Disclosure, Media, Warning } from './ui'
 import { useQueryClient } from '@tanstack/react-query'
 
 function useOnline() {
@@ -205,7 +199,16 @@ export function PersonView({ person }: { person: Person }) {
         )
       })}
 
-      <Cardio person={person} dayId={dayId} healing={healing} sessionId={active?.id ?? null} />
+      {person === 'emily' && (
+        <RunPlan
+          person={person}
+          healing={healing}
+          dayId={dayId}
+          sessions={sessions.data ?? []}
+          sessionId={active?.id ?? null}
+          disabled={offline}
+        />
+      )}
 
       <button
         type="button"
@@ -329,71 +332,6 @@ function ProgramInfo({ person, healing }: { person: Person; healing: boolean }) 
           </Disclosure>
         ))}
       </div>
-    </section>
-  )
-}
-
-function Cardio({ person, dayId, healing, sessionId }: { person: Person; dayId: DayId; healing: boolean; sessionId: string | null }) {
-  const log = useLogCardio(person)
-  const history = useCardio(person)
-  const [kind, setKind] = useState<CardioKind>(healing ? 'easy' : 'int-4x4')
-  const [minutes, setMinutes] = useState(25)
-  const plan = EMILY_CARDIO[dayId]
-  const today = localDate()
-  const doneToday = useMemo(() => history.data?.filter((c) => c.date === today) ?? [], [history.data, today])
-  if (person === 'kevin') return null
-
-  return (
-    <section className="rounded-2xl border-2 border-cardio/50 bg-cardio-bg p-4">
-      <div className="text-xs font-semibold tracking-widest text-cardio uppercase">Cardio</div>
-      <div className="mt-1 text-xl font-bold">{healing && plan.hard ? 'Easy run (intervals on hold)' : plan.label}</div>
-      {isSunday(today) && <div className="text-sm text-dim">Sunday: {SUNDAY_CARDIO}</div>}
-      {plan.hard && !healing && <div className="mt-1 text-sm text-dim">Max 2–3 hard sessions a week.</div>}
-      {healing && (
-        <div className="mt-1 text-sm text-dim">Healing mode: all intervals paused. When they come back, 4×4 first, sprints last.</div>
-      )}
-      <div className="mt-3 space-y-2" role="radiogroup" aria-label="Cardio type">
-        {CARDIO_OPTIONS.map((o) => {
-          const blocked = healing && o.id.startsWith('int-')
-          return (
-            <button
-              key={o.id}
-              type="button"
-              role="radio"
-              aria-checked={kind === o.id}
-              disabled={blocked}
-              onClick={() => setKind(o.id)}
-              className={
-                'flex min-h-12 w-full items-center justify-between rounded-xl px-4 text-left text-sm font-semibold ' +
-                (kind === o.id ? 'bg-ink text-bg' : 'bg-panel-2 text-ink') +
-                (blocked ? ' opacity-40' : '')
-              }
-            >
-              {o.label}
-              {blocked && <span className="text-xs font-medium">on hold (healing)</span>}
-            </button>
-          )
-        })}
-      </div>
-      {kind !== 'none' && (
-        <div className="mt-4 flex items-center justify-between">
-          <span className="text-sm text-dim">Minutes</span>
-          <Stepper value={minutes} step={5} min={5} onChange={setMinutes} unit="min" />
-        </div>
-      )}
-      <button
-        type="button"
-        onClick={() => log.mutate({ kind, minutes: kind === 'none' ? null : minutes, session_id: sessionId })}
-        className="mt-4 h-12 w-full rounded-xl border border-line bg-panel-2 font-bold"
-      >
-        {log.isPending ? 'Saving…' : 'Log cardio'}
-      </button>
-      {doneToday.length > 0 && (
-        <div className="mt-2 text-sm text-accent">
-          Logged today: {doneToday.map((c) => CARDIO_OPTIONS.find((o) => o.id === c.kind)?.label + (c.minutes ? ` · ${c.minutes} min` : '')).join(', ')}
-        </div>
-      )}
-      <div className="sr-only">{PERSON_NAME[person]}</div>
     </section>
   )
 }
