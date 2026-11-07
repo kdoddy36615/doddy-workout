@@ -21,6 +21,8 @@
   --color-warmup-bg: #1d1730;
   --color-cardio: #4fd8c4;
   --color-cardio-bg: #0e2421;
+  --color-food: #ff9b5e;
+  --color-food-bg: #2a170c;
 }
 
 :root { color-scheme: dark; }

@@ -37,15 +37,15 @@ export function NutritionCard(props: { person: Person; healing: boolean; disable
   const weighed = last?.date === today
 
   return (
-    <section className="rounded-2xl border border-line bg-panel p-4">
+    <section className="rounded-2xl border-2 border-food/50 bg-food-bg p-4">
       <div className="flex items-baseline justify-between">
-        <div className="text-xs font-semibold tracking-widest text-dim uppercase">Nutrition · daily target</div>
+        <div className="text-xs font-semibold tracking-widest text-food uppercase">Nutrition</div>
         <div className="text-xs text-faint">
-          Goal {p.goal} · {formatWeight(toGo)} lb to go
+          Goal {p.goal} · {formatWeight(toGo)} to go
         </div>
       </div>
       <div className="mt-1 text-4xl font-black tracking-tight tabular-nums">
-        {t.kcal.toLocaleString()} <span className="text-base font-semibold text-dim">kcal</span>
+        {t.kcal.toLocaleString()} <span className="text-base font-semibold text-dim">kcal / day</span>
       </div>
       {longRunBonus > 0 && <div className="text-sm font-semibold text-cardio">Includes +{longRunBonus} kcal (carbs) for today’s long run.</div>}
 
@@ -55,7 +55,7 @@ export function NutritionCard(props: { person: Person; healing: boolean; disable
           ['Carbs', t.carbs],
           ['Fat', t.fat],
         ].map(([label, g]) => (
-          <div key={label} className="rounded-xl bg-panel-2 py-2.5">
+          <div key={label} className="rounded-xl bg-bg/40 py-2.5">
             <div className="text-2xl font-extrabold tabular-nums">
               {g}
               <span className="text-sm font-semibold text-dim">g</span>
@@ -65,7 +65,7 @@ export function NutritionCard(props: { person: Person; healing: boolean; disable
         ))}
       </div>
 
-      <div className="mt-4 rounded-xl bg-panel-2/60 p-3">
+      <div className="mt-4 rounded-xl bg-bg/40 p-3">
         <div className="flex items-center justify-between gap-3">
           <span className="text-sm font-semibold">Weekly weigh-in</span>
           <Stepper value={entry ?? current} step={0.5} min={80} onChange={setEntry} unit="lb" disabled={props.disabled} />
@@ -74,7 +74,7 @@ export function NutritionCard(props: { person: Person; healing: boolean; disable
           type="button"
           disabled={props.disabled || logWeight.isPending}
           onClick={() => logWeight.mutate(entry ?? current, { onSuccess: () => setEntry(null) })}
-          className="mt-3 h-11 w-full rounded-xl border border-line font-bold"
+          className="mt-3 h-11 w-full rounded-xl bg-food font-bold text-bg disabled:opacity-50"
         >
           {logWeight.isPending ? 'Saving…' : weighed ? 'Update today’s weigh-in' : 'Log weigh-in'}
         </button>
