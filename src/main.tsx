@@ -1,18 +1,35 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister'
+import { QueryClient } from '@tanstack/react-query'
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 
 const qc = new QueryClient({
-  defaultOptions: { queries: { staleTime: 30_000, retry: 2, refetchOnWindowFocus: true } },
+  defaultOptions: {
+    // offlineFirst: show the last data saved on the phone when there's no signal
+    queries: { staleTime: 30_000, gcTime: 7 * 864e5, retry: 2, refetchOnWindowFocus: true, networkMode: 'offlineFirst' },
+  },
+})
+
+// Keeps the last-loaded workout on the phone (localStorage) so it renders offline.
+const persister = createSyncStoragePersister({
+  storage: (() => {
+    try {
+      return window.localStorage
+    } catch {
+      return undefined
+    }
+  })(),
+  key: 'doddy-workout-cache',
 })
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <QueryClientProvider client={qc}>
+    <PersistQueryClientProvider client={qc} persistOptions={{ persister, maxAge: 7 * 864e5 }}>
       <App />
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   </StrictMode>,
 )
 

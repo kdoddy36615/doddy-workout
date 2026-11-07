@@ -1,10 +1,20 @@
 // Offline cache for the app shell + form clips. Logging still needs signal.
-const VERSION = 'v1'
+const VERSION = 'v3'
 const SHELL = `shell-${VERSION}`
 const MEDIA = 'media-v1'
 
+// Cache the page plus every bundle it references, so the app opens with no signal.
+async function precacheShell() {
+  const cache = await caches.open(SHELL)
+  const res = await fetch('/', { cache: 'no-store' })
+  const html = await res.clone().text()
+  await cache.put('/', res)
+  const assets = [...html.matchAll(/(?:src|href)="(\/(?:assets|icons)\/[^"]+)"/g)].map((m) => m[1])
+  await cache.addAll([...new Set([...assets, '/manifest.webmanifest', '/favicon.svg'])])
+}
+
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(SHELL).then((c) => c.addAll(['/', '/manifest.webmanifest'])).then(() => self.skipWaiting()))
+  e.waitUntil(precacheShell().then(() => self.skipWaiting()))
 })
 
 // Download every form clip once so they play with no signal.
@@ -13,7 +23,7 @@ async function precacheMedia() {
     const list = await (await fetch('/media-list.json', { cache: 'no-store' })).json()
     const cache = await caches.open(MEDIA)
     for (const url of list) {
-      if (!(await cache.match(url))) {
+      if (!(await cache.match(url, { ignoreVary: true }))) {
         const res = await fetch(url)
         if (res.ok) await cache.put(url, res)
       }
@@ -41,7 +51,7 @@ self.addEventListener('message', (e) => {
 async function mediaResponse(req) {
   const cache = await caches.open(MEDIA)
   const url = new URL(req.url).pathname
-  let full = await cache.match(url)
+  let full = await cache.match(url, { ignoreVary: true })
   if (!full) {
     const net = await fetch(url)
     if (!net.ok) return net
@@ -87,14 +97,14 @@ self.addEventListener('fetch', (e) => {
           caches.open(SHELL).then((c) => c.put('/', copy))
           return res
         })
-        .catch(() => caches.match('/')),
+        .catch(() => caches.match('/', { ignoreVary: true })),
     )
     return
   }
-  if (url.pathname.startsWith('/assets/') || url.pathname.startsWith('/icons/')) {
+  if (url.pathname.startsWith('/assets/') || url.pathname.startsWith('/icons/') || url.pathname === '/favicon.svg' || url.pathname === '/manifest.webmanifest') {
     // hashed build files never change: cache first
     e.respondWith(
-      caches.match(req).then(
+      caches.match(req, { ignoreVary: true, ignoreSearch: true }).then(
         (hit) =>
           hit ||
           fetch(req).then((res) => {

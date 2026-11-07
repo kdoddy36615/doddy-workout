@@ -79,10 +79,10 @@ export function PersonView({ person }: { person: Person }) {
     logSet.mutate({ ...s, session_id: sess.id })
   }
 
-  if (sessions.isError || states.isError) {
+  if (!sessions.data && !states.data && (sessions.isError || states.isError)) {
     return <div className="p-4 text-danger">Couldn’t reach the database. Check your signal and reload.</div>
   }
-  if (sessions.isLoading || states.isLoading || choices.isLoading) {
+  if (!sessions.data || !states.data || !choices.data) {
     return <div className="p-6 text-dim">Loading…</div>
   }
 
@@ -90,8 +90,15 @@ export function PersonView({ person }: { person: Person }) {
   const warmup = WARMUPS[person][day.kind]
   const sets = setLogs.data ?? []
 
+  const offline = sessions.isError || states.isError || (typeof navigator !== 'undefined' && !navigator.onLine)
+
   return (
     <div className="space-y-4">
+      {offline && (
+        <div className="rounded-xl border border-warn/40 bg-warn-bg px-4 py-3 text-sm text-warn">
+          No signal. Showing your last saved workout; logging sets needs a connection.
+        </div>
+      )}
       <ProgramInfo person={person} healing={healing} />
 
       <section className="rounded-2xl border border-line bg-panel p-4">
