@@ -17,6 +17,10 @@
   --color-warn-bg: #2a1f0d;
   --color-danger: #ff6b6b;
   --color-danger-bg: #2c1214;
+  --color-warmup: #b69cff;
+  --color-warmup-bg: #1d1730;
+  --color-cardio: #4fd8c4;
+  --color-cardio-bg: #0e2421;
 }
 
 :root { color-scheme: dark; }

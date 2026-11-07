@@ -44,6 +44,12 @@ export type SlotPerson = {
   warnings?: string[]
   /** shown only while Emily's healing mode is on */
   healingWarnings?: string[]
+  /** variant preselected while healing mode is on (if she hasn't picked one) */
+  healingDefault?: string
+  /** how weight increases behave while healing: 'slow' = every other success, 'hold' = none */
+  healingProgression?: 'slow' | 'hold'
+  /** days where this person skips the slot (e.g. Emily's long-run Saturday legs) */
+  skipOn?: DayId[]
 }
 
 export type Slot = {
@@ -63,6 +69,8 @@ export type Day = {
   short: string
   kind: DayKind
   slots: Slot[]
+  /** shown at the top of the day for that person */
+  note?: Partial<Record<Person, string>>
 }
 
 export const ROTATION: DayId[] = ['pushA', 'pullA', 'legs1', 'pushB', 'pullB', 'legs2']
@@ -126,7 +134,7 @@ export const EXERCISES: Record<string, Exercise> = Object.fromEntries(
     ex({ id: 'back-squat', name: 'Back squat', load: 'barbell', media: '/media/back-squat.mp4',
       cues: ['High bar, comfortable grip width', 'Set the safety pins just above parallel as a depth marker', 'Control the way down, no bouncing'] }),
     ex({ id: 'goblet-squat', name: 'Goblet squat', load: 'dumbbell', media: '/media/goblet-squat.mp4',
-      cues: ['Hold one DB at your chest', 'Sit between your heels, chest up'] }),
+      cues: ['Hold one DB at your chest', 'Chest up, squat down to your working depth (Kevin: just above parallel)'] }),
     ex({ id: 'bench-box-squat', name: 'Bar squat to bench', load: 'barbell', media: '/media/bench-box-squat.mp4',
       cues: ['Flat bench behind you in the rack', 'Sit back until you lightly touch, then stand'] }),
     ex({ id: 'rdl', name: 'Romanian deadlift', load: 'barbell', media: '/media/rdl.mp4',
@@ -153,6 +161,8 @@ export const EXERCISES: Record<string, Exercise> = Object.fromEntries(
 const EMILY_BRACE =
   'Ab strain: keep it conservative with reps in reserve. Moderate breath and brace, exhale through the hard part. Sharp ab pain while bracing = stop.'
 const KEVIN_HIP_CONTROL = 'Hip flexor: controlled, no bouncing at the bottom.'
+const EMILY_STANDING_PRESS =
+  'Ab strain: the standing single-arm press loads your core sideways. Stay seated while healing.'
 
 // ---------------------------------------------------------------------------
 // Day building blocks
@@ -241,6 +251,7 @@ const pullAccessories: Slot[] = [
       variants: ['side-plank', 'kneeling-side-plank'],
       start: {},
       variantScheme: { 'kneeling-side-plank': S(3, 10, 20) },
+      healingDefault: 'kneeling-side-plank',
       healingWarnings: ['Ab strain: use the kneeling version for now. Skip it entirely if the pain is on the side of your waist.'],
     },
   },
@@ -250,6 +261,7 @@ const deadliftEmily: SlotPerson = {
   variants: ['deadlift'],
   start: { deadlift: 115 },
   warnings: [EMILY_BRACE],
+  healingProgression: 'slow',
 }
 
 const legsSlots: Slot[] = [
@@ -263,19 +275,24 @@ const legsSlots: Slot[] = [
       warnings: [
         'Hip flexor: go to just above parallel, set the safety pins there as a depth marker. Control the descent, no bouncing.',
         'If the front of the hip or groin pinches at the bottom, cut the depth a notch.',
+        'Shoulder: high bar with a wider, comfortable grip. If holding the bar hurts the shoulder, switch to goblet squat.',
       ],
     },
     emily: {
       variants: ['goblet-squat', 'bench-box-squat'],
-      start: { 'goblet-squat': 20, 'bench-box-squat': 45 },
+      start: { 'goblet-squat': 30, 'bench-box-squat': 45 },
+      // one dumbbell jumps 5 lb at a time, so goblet works better as a rep-range lift
+      variantScheme: { 'goblet-squat': S(3, 8, 12) },
       warnings: [EMILY_BRACE],
+      healingProgression: 'slow',
+      skipOn: ['legs2'],
     },
   },
   {
     id: 'rdl',
     scheme: S(3, 8, 12),
     kevin: { variants: ['rdl'], start: { rdl: 65 }, warnings: [KEVIN_HIP_CONTROL] },
-    emily: { variants: ['rdl'], start: { rdl: 65 }, warnings: [EMILY_BRACE] },
+    emily: { variants: ['rdl'], start: { rdl: 65 }, warnings: [EMILY_BRACE], healingProgression: 'slow', skipOn: ['legs2'] },
   },
   {
     id: 'leg-press',
@@ -285,7 +302,7 @@ const legsSlots: Slot[] = [
       start: { 'leg-press': 90 },
       warnings: [KEVIN_HIP_CONTROL + " Don't let knees come toward your chest. Save your seat/depth in setup notes."],
     },
-    emily: { variants: ['leg-press'], start: { 'leg-press': 90 }, warnings: [EMILY_BRACE] },
+    emily: { variants: ['leg-press'], start: { 'leg-press': 90 }, warnings: [EMILY_BRACE], healingProgression: 'slow' },
   },
   {
     id: 'leg-curl',
@@ -310,17 +327,20 @@ const legsSlots: Slot[] = [
     emily: {
       variants: ['dead-bug', 'heel-tap-dead-bug'],
       start: {},
+      healingDefault: 'heel-tap-dead-bug',
       healingWarnings: ['Ab strain: bent-knee heel taps, one limb at a time. No double-leg lowering.'],
     },
   },
   {
     id: 'pallof',
-    scheme: S(3, 10),
+    // rep range so the weight doesn't climb every session
+    scheme: S(3, 10, 15),
     kevin: { variants: ['pallof-press'], start: { 'pallof-press': 10 } },
     emily: {
       variants: ['pallof-press'],
       start: { 'pallof-press': 10 },
       warnings: ['Ab strain: keep it light; stop if the side of your waist hurts.'],
+      healingProgression: 'hold',
     },
   },
 ]
@@ -334,7 +354,6 @@ const kevinBench: SlotPerson = {
   start: { bench: 60, 'neutral-db-bench': 20, 'floor-press': 60 },
   warnings: [
     'Shoulder: tuck elbows ~45°, shoulder blades back and down, touch lower chest.',
-    'If the bottom pinches, switch to floor press or neutral-grip DB bench.',
   ],
 }
 
@@ -365,6 +384,8 @@ export const DAYS: Record<DayId, Day> = {
         emily: {
           variants: ['seated-db-press', 'standing-db-press'],
           start: { 'seated-db-press': 10, 'standing-db-press': 10 },
+          increment: 2.5,
+          healingWarnings: [EMILY_STANDING_PRESS],
         },
       },
       inclineSlot,
@@ -387,6 +408,7 @@ export const DAYS: Record<DayId, Day> = {
           start: { deadlift: 115 },
           warnings: [
             'Biceps tendon: double overhand grip; hook grip once it slips. Never mixed grip (the palm-up arm is the one that tears).',
+            'Under 135 lb the small plates leave the bar low. Set the plates on blocks or stacked plates so you start at normal height (also easier on the hip).',
           ],
         },
         emily: deadliftEmily,
@@ -418,8 +440,10 @@ export const DAYS: Record<DayId, Day> = {
         emily: {
           variants: ['seated-db-press', 'standing-db-press'],
           start: { 'seated-db-press': 15, 'standing-db-press': 15 },
-          // DB jumps are 10 lb total, so double progression instead of 5x5.
+          // DB jumps are big, so double progression instead of 5x5, in 2.5 lb steps.
           scheme: S(4, 6, 10),
+          increment: 2.5,
+          healingWarnings: [EMILY_STANDING_PRESS],
         },
       },
       {
@@ -452,13 +476,21 @@ export const DAYS: Record<DayId, Day> = {
           variants: ['barbell-row', 'chest-supported-row'],
           start: { 'barbell-row': 55, 'chest-supported-row': 15 },
           warnings: [EMILY_BRACE],
-          healingWarnings: ['If anything twinges, use the chest-supported row for now.'],
+          healingDefault: 'chest-supported-row',
+          healingProgression: 'slow',
         },
       },
       ...pullAccessories,
     ],
   },
-  legs2: { id: 'legs2', name: 'Legs', short: 'L', kind: 'legs', slots: legsSlots },
+  legs2: {
+    id: 'legs2',
+    name: 'Legs',
+    short: 'L',
+    kind: 'legs',
+    slots: legsSlots,
+    note: { emily: 'Long-run day: run first, then this light leg session (no squat or RDL today).' },
+  },
 }
 
 // ---------------------------------------------------------------------------
@@ -467,23 +499,34 @@ export const DAYS: Record<DayId, Day> = {
 
 export type WarmupItem = { text: string; media?: string }
 const W = (text: string, media?: string): WarmupItem => ({ text, media })
+const EMILY_WARMUP = [
+  W('5 min easy incline walk or bike'),
+  W('Bird dogs 1x6 per side', '/media/bird-dog.mp4'),
+  W('Glute bridges 1x10', '/media/warmup-glute-bridge.mp4'),
+  W('Main lift: do the warm-up sets shown on its card'),
+]
 const PULL_APART = W('Band pull-aparts 2x15', '/media/warmup-pull-apart.mp4')
 const EXT_ROT = W('Band external rotations 2x15 per arm', '/media/warmup-external-rotation.mp4')
 const BICEPS_ISO = W('Biceps isometric: hold a light curl at 90°, 2x30s')
 
 export const WARMUPS: Record<Person, Partial<Record<DayKind, WarmupItem[]>>> = {
   kevin: {
-    push: [PULL_APART, EXT_ROT, BICEPS_ISO, W('2–3 ramp-up sets before the main lift')],
-    pull: [PULL_APART, EXT_ROT, BICEPS_ISO],
+    push: [PULL_APART, EXT_ROT, BICEPS_ISO, W('Main lift: do the warm-up sets shown on its card')],
+    pull: [PULL_APART, EXT_ROT, BICEPS_ISO, W('Main lift: do the warm-up sets shown on its card')],
     legs: [
       W('5 min easy upright bike or incline walk'),
       W('Glute bridges 2x10', '/media/warmup-glute-bridge.mp4'),
       W('90/90 hip switches 2x8 per side', '/media/warmup-9090.mp4'),
       W('Bodyweight squats to your working depth 1x10'),
+      W('Main lift: do the warm-up sets shown on its card'),
       W('No hard static hip-flexor stretching before lifting'),
     ],
   },
-  emily: {},
+  emily: {
+    push: EMILY_WARMUP,
+    pull: EMILY_WARMUP,
+    legs: EMILY_WARMUP,
+  },
 }
 
 export type CardioPlan = { label: string; hard?: boolean }
@@ -509,7 +552,8 @@ export const CARDIO_OPTIONS: { id: CardioKind; label: string; sprint?: boolean }
 export const PROGRAM_RULES = [
   'Hit all prescribed reps → add weight next time. Fail the same weight 3 sessions in a row → deload 10%.',
   '"5+" = AMRAP last set: stop 1–2 reps shy of failure.',
-  'Warm up main lifts: empty bar → ~50% → 70% → 85%.',
+  'Warm-up sets for each barbell main lift are shown on its card and scale with the weight (none needed at the empty bar).',
+  'First session of a lift with no injury note: if every set felt easy (3+ reps left), tap “Felt easy” for a bigger jump next time.',
   'Machines vary by brand: recalibrate the first session (>12 reps → heavier, <8 → lighter).',
   'Start conservatively on anything touching an injury.',
   'Sleep and protein matter a lot on a 6-day split. If it feels rough early, keep leg days light or skip the second one.',
@@ -587,7 +631,40 @@ export const stateKey = (variantId: string, main: boolean | undefined) =>
   main ? `${variantId}:main` : variantId
 
 export function slotsFor(person: Person, dayId: DayId) {
-  return DAYS[dayId].slots.filter((s) => s[person]).map((s) => ({ slot: s, cfg: s[person]! }))
+  return DAYS[dayId].slots
+    .filter((s) => s[person] && !s[person]!.skipOn?.includes(dayId))
+    .map((s) => ({ slot: s, cfg: s[person]! }))
+}
+
+/** The variant to use: her own pick, else the healing default while healing, else the standard. */
+export function pickVariant(cfg: SlotPerson, chosen: string | undefined, healing: boolean) {
+  if (chosen && cfg.variants.includes(chosen)) return chosen
+  if (healing && cfg.healingDefault) return cfg.healingDefault
+  return cfg.variants[0]
+}
+
+/** When to pick each alternative, shown in the swap dropdown. Key: person/slotId/variantId. */
+export const SWAP_WHEN: Record<string, string> = {
+  'kevin/bench/neutral-db-bench': 'bottom of the bench pinches your shoulder',
+  'kevin/bench/floor-press': 'it still pinches with DBs (shorter range)',
+  'kevin/bench-acc/neutral-db-bench': 'bottom of the bench pinches your shoulder',
+  'kevin/bench-acc/floor-press': 'it still pinches with DBs (shorter range)',
+  'kevin/shoulder-acc/cable-y-raise': 'the seated press pinches',
+  'kevin/press-main/incline-bench': 'the machine press pinches',
+  'kevin/press-main/seated-db-press': 'the machine is taken or missing',
+  'emily/shoulder-acc/standing-db-press': 'healing is off and you want more core work',
+  'emily/press-main/standing-db-press': 'healing is off and you want more core work',
+  'kevin/pulldown/neutral-pulldown': 'the wide overhand grip bothers your shoulder',
+  'emily/pulldown/neutral-pulldown': 'the wide grip feels awkward',
+  'kevin/curl/hammer-curl': 'curls hurt the front of your shoulder',
+  'emily/curl/hammer-curl': 'regular curls bother your wrists or elbows',
+  'emily/side-plank/kneeling-side-plank': 'healing, or the side of your waist is sore',
+  'kevin/squat/goblet-squat': 'holding the bar hurts your shoulder, or depth pinches your hip',
+  'emily/squat/bench-box-squat': 'healing is off and you’re ready for a barbell',
+  'kevin/dead-bug/heel-tap-dead-bug': 'straight-leg lowering bothers your hip',
+  'emily/dead-bug/heel-tap-dead-bug': 'healing, or your abs feel it in a bad way',
+  'kevin/row/chest-supported-row': 'your lower back is tired or barbell rows twinge',
+  'emily/row/chest-supported-row': 'healing, or anything twinges on barbell rows',
 }
 
 export function schemeFor(slot: Slot, cfg: SlotPerson, variantId: string): Scheme {

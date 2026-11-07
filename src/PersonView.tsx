@@ -30,6 +30,7 @@ import {
   ROTATION,
   SUNDAY_CARDIO,
   WARMUPS,
+  pickVariant,
   slotsFor,
   stateKey,
   type CardioKind,
@@ -149,13 +150,25 @@ export function PersonView({ person }: { person: Person }) {
         <HistoryStrip sessions={sessions.data ?? []} />
       </section>
 
+      {day.note?.[person] && (
+        <div className="rounded-xl border border-cardio/40 bg-cardio-bg px-4 py-3 text-sm font-semibold text-cardio">{day.note[person]}</div>
+      )}
+
       {warmup && (
-        <section className="rounded-2xl border border-line bg-panel px-4">
-          <Disclosure label="Warm-up" defaultOpen={false}>
+        <section className="rounded-2xl border-2 border-warmup/60 bg-warmup-bg px-4">
+          <Disclosure
+            label={
+              <span className="flex items-center gap-2 text-base">
+                <span className="rounded-md bg-warmup px-2 py-0.5 text-xs font-black tracking-wider text-bg uppercase">Start here</span>
+                <span className="font-bold text-warmup">Warm-up</span>
+              </span>
+            }
+            defaultOpen={false}
+          >
             <ul className="space-y-1">
               {warmup.map((w) =>
                 w.media ? (
-                  <li key={w.text} className="rounded-lg bg-panel-2/60 px-3">
+                  <li key={w.text} className="rounded-lg bg-bg/40 px-3">
                     <Disclosure label={<span className="font-medium text-ink/90">{w.text}</span>}>
                       <Media src={w.media} alt={`${w.text} form`} />
                     </Disclosure>
@@ -172,7 +185,7 @@ export function PersonView({ person }: { person: Person }) {
       )}
 
       {slotsFor(person, dayId).map(({ slot, cfg }) => {
-        const variant = choices.data?.[slot.id] ?? cfg.variants[0]
+        const variant = pickVariant(cfg, choices.data?.[slot.id], healing)
         const k = stateKey(variant, slot.main)
         return (
           <ExerciseCard
@@ -199,7 +212,7 @@ export function PersonView({ person }: { person: Person }) {
         disabled={!active || finish.isPending || offline}
         onClick={() =>
           active &&
-          finish.mutate({ session: active, states: states.data ?? {}, choices: choices.data ?? {} }, { onSuccess: () => setOverride(null) })
+          finish.mutate({ session: active, states: states.data ?? {}, choices: choices.data ?? {}, healing }, { onSuccess: () => setOverride(null) })
         }
         className="h-16 w-full rounded-2xl bg-accent text-lg font-black text-accent-ink disabled:bg-panel-2 disabled:text-faint"
       >
@@ -249,19 +262,29 @@ function ProgramInfo({ person, healing }: { person: Person; healing: boolean }) 
     <section className="space-y-3">
       {person === 'emily' && (
         <div className="rounded-2xl border border-line bg-panel p-4">
-          <label className="flex items-center justify-between gap-4">
+          <div className="flex items-center justify-between gap-4">
             <span>
               <span className="block font-bold">Healing mode</span>
               <span className="text-sm text-dim">Conservative while the ab strain heals</span>
             </span>
-            <input
-              type="checkbox"
+            <button
+              type="button"
               role="switch"
-              checked={healing}
-              onChange={(e) => setHealing.mutate({ person, on: e.target.checked })}
-              className="h-7 w-12 shrink-0 cursor-pointer appearance-none rounded-full bg-panel-2 transition-colors before:block before:size-6 before:translate-x-0.5 before:rounded-full before:bg-faint before:transition-transform checked:bg-accent checked:before:translate-x-5.5 checked:before:bg-accent-ink"
-            />
-          </label>
+              aria-checked={healing}
+              aria-label="Healing mode"
+              onClick={() => setHealing.mutate({ person, on: !healing })}
+              className="flex shrink-0 items-center gap-2"
+            >
+              <span className={'w-7 text-right text-xs font-bold ' + (healing ? 'text-accent' : 'text-faint')}>{healing ? 'ON' : 'OFF'}</span>
+              <span className={'relative h-8 w-14 rounded-full transition-colors ' + (healing ? 'bg-accent' : 'bg-line')}>
+                <span
+                  className={
+                    'absolute top-1 left-1 size-6 rounded-full bg-white shadow-md transition-transform ' + (healing ? 'translate-x-6' : 'translate-x-0')
+                  }
+                />
+              </span>
+            </button>
+          </div>
           {healing && (
             <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-dim">
               {HEALING_NOTES.map((n) => (
@@ -321,8 +344,8 @@ function Cardio({ person, dayId, healing, sessionId }: { person: Person; dayId: 
   if (person === 'kevin') return null
 
   return (
-    <section className="rounded-2xl border border-line bg-panel p-4">
-      <div className="text-xs font-semibold tracking-widest text-dim uppercase">Cardio</div>
+    <section className="rounded-2xl border-2 border-cardio/50 bg-cardio-bg p-4">
+      <div className="text-xs font-semibold tracking-widest text-cardio uppercase">Cardio</div>
       <div className="mt-1 text-xl font-bold">{healing && plan.hard ? 'Easy run (intervals on hold)' : plan.label}</div>
       {isSunday(today) && <div className="text-sm text-dim">Sunday: {SUNDAY_CARDIO}</div>}
       {plan.hard && !healing && <div className="mt-1 text-sm text-dim">Max 2–3 hard sessions a week.</div>}

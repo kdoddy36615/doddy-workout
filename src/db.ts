@@ -4,6 +4,7 @@ import { evaluate, localDate, staleActive } from './logic'
 import {
   EXERCISES,
   incrementFor,
+  pickVariant,
   schemeFor,
   slotsFor,
   stateKey,
@@ -27,6 +28,8 @@ export type ExerciseState = {
   suggested: number | null
   step: number | null
   setup_note: string | null
+  ups: number
+  calibrated: boolean
 }
 export type Session = {
   id: string
@@ -230,13 +233,14 @@ export function useFinish(person: Person) {
       session: Session
       states: Record<string, ExerciseState>
       choices: Record<string, string>
+      healing: boolean
     }) => {
       // wait for queued set saves, then evaluate what's actually in the DB
       while (qc.isMutating({ mutationKey: ['logSet'] }) > 0) await new Promise((r) => setTimeout(r, 100))
       const sets = await must<SetLog[]>(supabase.from('set_logs').select('*').eq('session_id', v.session.id))
       const updates: ExerciseState[] = []
       for (const { slot, cfg } of slotsFor(person, v.session.day_id)) {
-        const variant = v.choices[slot.id] ?? cfg.variants[0]
+        const variant = pickVariant(cfg, v.choices[slot.id], v.healing)
         const k = stateKey(variant, slot.main)
         const logged = sets.filter((s) => s.key === k)
         if (!logged.length) continue
@@ -249,9 +253,19 @@ export function useFinish(person: Person) {
           load: EXERCISES[variant].load,
           main: Boolean(slot.main),
           fails: st.fails,
+          ups: st.ups,
+          progression: v.healing ? (cfg.healingProgression ?? 'normal') : 'normal',
         })
         if (ev.outcome === 'skipped') continue
-        updates.push({ ...st, person, fails: ev.fails, suggested: ev.suggested ?? (ev.outcome === 'up' || ev.outcome === 'deload' ? null : st.suggested) })
+        // a "Felt easy" calibration jump tapped this session beats the normal +1 step
+        const calibrationJump = st.suggested != null && st.suggested > st.weight ? st.suggested : null
+        const suggested =
+          ev.outcome === 'up'
+            ? Math.max(ev.suggested ?? 0, calibrationJump ?? 0)
+            : ev.outcome === 'deload' || ev.outcome === 'stepdown'
+              ? ev.suggested
+              : st.suggested
+        updates.push({ ...st, person, fails: ev.fails, ups: ev.ups, suggested, calibrated: true })
       }
       if (updates.length) {
         await must(supabase.from('exercise_state').upsert(updates.map((u) => ({ ...u, updated_at: new Date().toISOString() }))))
@@ -269,5 +283,5 @@ export function useFinish(person: Person) {
 }
 
 export function stateDefaults(k: string, weight: number): Omit<ExerciseState, 'person'> {
-  return { key: k, weight, fails: 0, suggested: null, step: null, setup_note: null }
+  return { key: k, weight, fails: 0, suggested: null, step: null, setup_note: null, ups: 0, calibrated: false }
 }

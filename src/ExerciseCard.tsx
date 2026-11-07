@@ -1,10 +1,12 @@
+import { useState } from 'react'
 import { stateDefaults, type ExerciseState, type SetLog } from './db'
-import { formatWeight } from './logic'
+import { formatWeight, warmupSets } from './logic'
 import {
   EXERCISES,
   incrementFor,
   schemeFor,
   stateKey,
+  SWAP_WHEN,
   type Load,
   type Person,
   type Scheme,
@@ -49,6 +51,17 @@ export function ExerciseCard(props: {
   const weighted = ex.load !== 'bodyweight'
   const warnings = [...(cfg.warnings ?? []), ...(healing ? (cfg.healingWarnings ?? []) : [])]
   const doneCount = props.sets.filter((s) => s.done).length
+  const warmup = warmupSets(st.weight)
+  const [showSwaps, setShowSwaps] = useState(false)
+  const why = (v: string) => SWAP_WHEN[`${props.person}/${slot.id}/${v}`] ?? 'you prefer it'
+  // first session on a lift with no injury notes: offer a bigger jump if it was easy
+  const calibrating =
+    weighted &&
+    !st.calibrated &&
+    warnings.length === 0 &&
+    !(healing && cfg.healingProgression) &&
+    doneCount >= scheme.sets &&
+    st.suggested == null
 
   const setWeight = (w: number) =>
     props.onState({ ...st, weight: w, fails: w === st.weight ? st.fails : 0, suggested: st.suggested === w ? null : st.suggested })
@@ -69,22 +82,54 @@ export function ExerciseCard(props: {
       </header>
 
       {cfg.variants.length > 1 && (
-        <label className="mt-3 block">
-          <span className="sr-only">Exercise variant</span>
-          <select
-            value={variant}
+        <div className="mt-3">
+          {variant !== cfg.variants[0] && (
+            <div className="mb-2 rounded-lg bg-panel-2 px-3 py-2 text-sm leading-snug">
+              <span className="font-semibold">Swapped in</span>
+              {healing && cfg.healingDefault === variant ? ' (preselected while healing)' : ''}: use this when{' '}
+              {why(variant)}. Switch back to {EXERCISES[cfg.variants[0]].name} once that’s no longer true.
+            </div>
+          )}
+          <button
+            type="button"
             disabled={props.disabled}
-            onChange={(e) => props.onVariant(e.target.value)}
-            className="h-11 w-full rounded-lg border border-line bg-panel-2 px-3 text-sm font-medium text-ink"
+            aria-expanded={showSwaps}
+            onClick={() => setShowSwaps((s) => !s)}
+            className="flex h-11 w-full items-center justify-between rounded-lg border border-line px-3 text-sm font-semibold text-dim"
           >
-            {cfg.variants.map((v, i) => (
-              <option key={v} value={v}>
-                {EXERCISES[v].name}
-                {i === 0 ? ' (standard)' : ''}
-              </option>
-            ))}
-          </select>
-        </label>
+            Swap exercise ({cfg.variants.length - 1} option{cfg.variants.length > 2 ? 's' : ''})
+            <span className={'text-faint transition-transform ' + (showSwaps ? 'rotate-180' : '')}>▾</span>
+          </button>
+          {showSwaps && (
+            <ul className="mt-2 space-y-2" role="radiogroup" aria-label="Exercise variant">
+              {cfg.variants.map((v, i) => (
+                <li key={v}>
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={v === variant}
+                    onClick={() => {
+                      props.onVariant(v)
+                      setShowSwaps(false)
+                    }}
+                    className={
+                      'w-full rounded-xl border px-3 py-2.5 text-left ' +
+                      (v === variant ? 'border-accent bg-accent/10' : 'border-line bg-panel-2')
+                    }
+                  >
+                    <span className="block text-sm font-bold">
+                      {EXERCISES[v].name}
+                      {v === variant && <span className="ml-2 text-xs font-semibold text-accent">current</span>}
+                    </span>
+                    <span className="block text-xs leading-snug text-dim">
+                      {i === 0 ? 'Standard. Use this unless one of the reasons below applies.' : `Use when ${why(v)}.`}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       )}
 
       {warnings.length > 0 && (
@@ -108,7 +153,7 @@ export function ExerciseCard(props: {
                 (st.suggested > st.weight ? 'bg-accent text-accent-ink' : 'bg-warn text-accent-ink')
               }
             >
-              {st.suggested > st.weight ? 'Suggested' : 'Deload to'} {formatWeight(st.suggested)} lb
+              {st.suggested > st.weight ? 'Suggested' : slot.main ? 'Deload to' : 'Go lighter:'} {formatWeight(st.suggested)} lb
             </button>
           )}
         </div>
@@ -116,9 +161,44 @@ export function ExerciseCard(props: {
       {weighted && st.weight === 0 && ex.load === 'machine' && variant === 'calf-raise' && (
         <div className="mt-1 text-xs text-faint">0 = bodyweight</div>
       )}
-      {st.fails > 0 && slot.main && (
+      {slot.main && ex.load === 'barbell' && (
+        <div className="mt-3 rounded-lg border border-warmup/40 bg-warmup-bg px-3 py-2 text-sm">
+          <span className="font-bold text-warmup">Warm-up sets: </span>
+          {warmup.length === 0 ? (
+            <span className="text-ink/90">none needed at the empty bar; your first set is the warm-up.</span>
+          ) : (
+            <span className="font-semibold text-ink tabular-nums">{warmup.map((w) => `${formatWeight(w.weight)}×${w.reps}`).join(' → ')}</span>
+          )}
+        </div>
+      )}
+      {st.fails > 0 && (
         <div className="mt-2 text-xs text-warn">
-          Missed reps {st.fails}× at this weight. 3 in a row suggests a 10% deload.
+          {slot.main
+            ? `Missed reps ${st.fails}× at this weight. 3 in a row suggests a ~10% deload.`
+            : `Below the rep range ${st.fails}× in a row. 2 in a row suggests going one step lighter.`}
+        </div>
+      )}
+      {calibrating && (
+        <div className="mt-3 rounded-lg border border-accent/40 bg-accent/10 p-3">
+          <div className="text-sm font-semibold">First time on this lift: how did it feel?</div>
+          <div className="mt-2 flex gap-2">
+            <button
+              type="button"
+              disabled={props.disabled}
+              onClick={() => props.onState({ ...st, suggested: st.weight + 2 * step })}
+              className="h-11 flex-1 rounded-lg bg-accent text-sm font-bold text-accent-ink"
+            >
+              Easy (3+ reps left) → +{formatWeight(2 * step)}
+            </button>
+            <button
+              type="button"
+              disabled={props.disabled}
+              onClick={() => props.onState({ ...st, calibrated: true })}
+              className="h-11 flex-1 rounded-lg bg-panel-2 text-sm font-bold"
+            >
+              About right
+            </button>
+          </div>
         </div>
       )}
 

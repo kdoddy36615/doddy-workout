@@ -11,15 +11,25 @@ export type Evaluation = {
   suggested: number | null
   /** consecutive failed sessions at this weight after this session */
   fails: number
-  outcome: 'up' | 'deload' | 'hold' | 'fail' | 'skipped'
+  /** successful sessions banked toward the next increase ('slow' progression) */
+  ups: number
+  outcome: 'up' | 'deload' | 'stepdown' | 'hold' | 'fail' | 'skipped'
 }
 
-const MIN_WEIGHT: Record<Load, number> = { barbell: 45, dumbbell: 0, machine: 0, bodyweight: 0 }
+export const MIN_WEIGHT: Record<Load, number> = { barbell: 45, dumbbell: 0, machine: 0, bodyweight: 0 }
 export const DELOAD_AFTER = 3
+export const STEPDOWN_AFTER = 2
 
 export function roundDown(weight: number, step: number) {
   if (step <= 0) return weight
   return Math.floor(weight / step + 1e-9) * step
+}
+
+/** ~10% deload rounded to the nearest step, but always at least one step lighter. */
+export function deloadWeight(weight: number, step: number, load: Load) {
+  const nearest = step > 0 ? Math.round((weight * 0.9) / step) * step : weight * 0.9
+  const lighter = nearest >= weight ? weight - step : nearest
+  return Math.max(MIN_WEIGHT[load], +lighter.toFixed(2))
 }
 
 /**
@@ -27,7 +37,9 @@ export function roundDown(weight: number, step: number) {
  * - Fixed reps (5x5 etc.): every set at target → +increment. Any set short → fail.
  * - Rep range (8–12): every set at the top → +increment. Any set below the bottom → fail.
  *   Inside the range = hold (progress by reps).
- * - Main lifts deload 10% after DELOAD_AFTER fails in a row. Accessories just hold.
+ * - Main lifts deload ~10% after DELOAD_AFTER fails in a row.
+ * - Accessories step down one increment after STEPDOWN_AFTER fails in a row.
+ * - progression 'slow': an increase needs two successful sessions. 'hold': never increases.
  */
 export function evaluate(args: {
   scheme: Scheme
@@ -37,26 +49,49 @@ export function evaluate(args: {
   load: Load
   main: boolean
   fails: number
+  ups?: number
+  progression?: 'normal' | 'slow' | 'hold'
 }): Evaluation {
-  const { scheme, sets, weight, increment, load, main, fails } = args
+  const { scheme, sets, weight, increment, load, main, fails, ups = 0, progression = 'normal' } = args
   const done = sets.filter((s) => s.done)
-  if (done.length === 0) return { suggested: null, fails, outcome: 'skipped' }
-  if (increment <= 0) return { suggested: null, fails: 0, outcome: 'hold' }
+  if (done.length === 0) return { suggested: null, fails, ups, outcome: 'skipped' }
+  if (increment <= 0) return { suggested: null, fails: 0, ups: 0, outcome: 'hold' }
 
   const [min, max] = scheme.reps
   const allDone = done.length >= scheme.sets
   const anyBelowMin = done.some((s) => s.reps < min) || !allDone
   const allAtTop = allDone && done.every((s) => s.reps >= max)
 
-  if (allAtTop) return { suggested: weight + increment, fails: 0, outcome: 'up' }
-  if (!anyBelowMin) return { suggested: null, fails: 0, outcome: 'hold' }
+  if (allAtTop) {
+    if (progression === 'hold') return { suggested: null, fails: 0, ups: 0, outcome: 'hold' }
+    if (progression === 'slow' && ups + 1 < 2) return { suggested: null, fails: 0, ups: ups + 1, outcome: 'hold' }
+    return { suggested: weight + increment, fails: 0, ups: 0, outcome: 'up' }
+  }
+  if (!anyBelowMin) return { suggested: null, fails: 0, ups, outcome: 'hold' }
 
   const nextFails = fails + 1
   if (main && nextFails >= DELOAD_AFTER) {
-    const deloaded = Math.max(MIN_WEIGHT[load], roundDown(weight * 0.9, increment))
-    return { suggested: deloaded < weight ? deloaded : null, fails: 0, outcome: 'deload' }
+    const deloaded = deloadWeight(weight, increment, load)
+    return { suggested: deloaded < weight ? deloaded : null, fails: 0, ups: 0, outcome: 'deload' }
   }
-  return { suggested: null, fails: nextFails, outcome: 'fail' }
+  if (!main && nextFails >= STEPDOWN_AFTER) {
+    const lighter = Math.max(MIN_WEIGHT[load], weight - increment)
+    return { suggested: lighter < weight ? lighter : null, fails: 0, ups: 0, outcome: 'stepdown' }
+  }
+  return { suggested: null, fails: nextFails, ups, outcome: 'fail' }
+}
+
+/** Warm-up sets for a barbell main lift, scaled to today's working weight. */
+export function warmupSets(weight: number, bar = 45): { weight: number; reps: number }[] {
+  if (weight <= bar) return []
+  const r5 = (w: number) => Math.max(bar, Math.round(w / 5) * 5)
+  if (weight < 95) return [{ weight: bar, reps: 8 }]
+  if (weight < 135) return [{ weight: bar, reps: 8 }, { weight: r5(weight * 0.7), reps: 5 }]
+  return [
+    { weight: bar, reps: 8 },
+    { weight: r5(weight * 0.5), reps: 5 },
+    { weight: r5(weight * 0.75), reps: 3 },
+  ]
 }
 
 // ---------------------------------------------------------------------------
