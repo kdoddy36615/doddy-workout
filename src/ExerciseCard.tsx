@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { stateDefaults, type ExerciseState, type SetLog } from './db'
 import { formatWeight } from './logic'
 import {
@@ -48,7 +47,6 @@ export function ExerciseCard(props: {
   const amrap = Boolean(scheme.amrapLast) && !healing
   const step = st.step ?? (incrementFor(cfg, variant) || 5)
   const weighted = ex.load !== 'bodyweight'
-  const [showSetup, setShowSetup] = useState(false)
   const warnings = [...(cfg.warnings ?? []), ...(healing ? (cfg.healingWarnings ?? []) : [])]
   const doneCount = props.sets.filter((s) => s.done).length
 
@@ -182,36 +180,50 @@ export function ExerciseCard(props: {
             </ul>
           </Disclosure>
         )}
-        <div>
-          <button type="button" className="py-3 text-sm font-semibold text-dim" onClick={() => setShowSetup((s) => !s)}>
-            Setup {st.setup_note ? `· ${st.setup_note}` : ''}
-          </button>
-          {showSetup && (
-            <div className="space-y-3 pb-3">
+        <Disclosure
+          label={
+            <span>
+              Machine settings
+              {st.setup_note && <span className="ml-2 font-normal text-ink/80">· {st.setup_note}</span>}
+            </span>
+          }
+        >
+          <div className="space-y-4">
+            <label className="block">
+              <span className="mb-1.5 block text-xs text-dim">
+                Your note for this exercise: seat height, pin position, foot spot. It shows on the card once saved.
+              </span>
               <input
                 defaultValue={st.setup_note ?? ''}
-                placeholder="Seat 4, pins at 7, feet low…"
+                placeholder="e.g. seat 4, pins at 7, feet low"
+                disabled={props.disabled}
                 onBlur={(e) => e.target.value !== (st.setup_note ?? '') && props.onState({ ...st, setup_note: e.target.value || null })}
                 className="h-11 w-full rounded-lg border border-line bg-panel-2 px-3 text-sm"
               />
-              {weighted && (
-                <div className="flex items-center gap-2 text-sm text-dim">
-                  Step
+            </label>
+            {weighted && (
+              <div>
+                <span className="mb-1.5 block text-xs text-dim">
+                  Weight jump: how much − / + changes the weight (and the suggested increase).
+                </span>
+                <div className="flex gap-2" role="group" aria-label="Weight jump">
                   {[2.5, 5, 10].map((s) => (
                     <button
                       key={s}
                       type="button"
+                      disabled={props.disabled}
+                      aria-pressed={step === s}
                       onClick={() => props.onState({ ...st, step: s })}
-                      className={'h-10 rounded-lg px-3 font-semibold ' + (step === s ? 'bg-ink text-bg' : 'bg-panel-2')}
+                      className={'h-11 flex-1 rounded-lg text-sm font-semibold ' + (step === s ? 'bg-ink text-bg' : 'bg-panel-2 text-ink')}
                     >
-                      {s}
+                      {s} lb
                     </button>
                   ))}
                 </div>
-              )}
-            </div>
-          )}
-        </div>
+              </div>
+            )}
+          </div>
+        </Disclosure>
       </div>
     </article>
   )
