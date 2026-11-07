@@ -34,6 +34,8 @@ export function ExerciseCard(props: {
   state: ExerciseState | undefined
   sets: SetLog[]
   healing: boolean
+  /** offline: nothing can be saved, so no taps */
+  disabled?: boolean
   onVariant: (v: string) => void
   onState: (s: Omit<ExerciseState, 'person'>) => void
   onSet: (s: Omit<SetLog, 'session_id'>) => void
@@ -73,6 +75,7 @@ export function ExerciseCard(props: {
           <span className="sr-only">Exercise variant</span>
           <select
             value={variant}
+            disabled={props.disabled}
             onChange={(e) => props.onVariant(e.target.value)}
             className="h-11 w-full rounded-lg border border-line bg-panel-2 px-3 text-sm font-medium text-ink"
           >
@@ -96,10 +99,11 @@ export function ExerciseCard(props: {
 
       {weighted && (
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-          <Stepper value={st.weight} step={step} onChange={setWeight} unit={UNIT[ex.load]} big />
+          <Stepper value={st.weight} step={step} onChange={setWeight} unit={UNIT[ex.load]} big disabled={props.disabled} />
           {st.suggested != null && st.suggested !== st.weight && (
             <button
               type="button"
+              disabled={props.disabled}
               onClick={() => props.onState({ ...st, weight: st.suggested!, suggested: null, fails: 0 })}
               className={
                 'rounded-full px-4 py-2.5 text-sm font-bold ' +
@@ -134,19 +138,20 @@ export function ExerciseCard(props: {
                 Set {i + 1}
                 {isAmrap && <span className="block text-accent">AMRAP</span>}
               </span>
-              <button type="button" aria-label="Fewer reps" className="grid size-11 place-items-center rounded-lg bg-panel-2 text-xl" onClick={() => save({ reps: Math.max(0, reps - 1) })}>
+              <button type="button" disabled={props.disabled} aria-label="Fewer reps" className="grid size-11 place-items-center rounded-lg bg-panel-2 text-xl" onClick={() => save({ reps: Math.max(0, reps - 1) })}>
                 −
               </button>
               <span className="w-12 text-center text-2xl font-bold tabular-nums">
                 {reps}
                 <span className="ml-0.5 text-xs font-medium text-faint">{ex.timed ? 's' : ''}</span>
               </span>
-              <button type="button" aria-label="More reps" className="grid size-11 place-items-center rounded-lg bg-panel-2 text-xl" onClick={() => save({ reps: reps + 1 })}>
+              <button type="button" disabled={props.disabled} aria-label="More reps" className="grid size-11 place-items-center rounded-lg bg-panel-2 text-xl" onClick={() => save({ reps: reps + 1 })}>
                 +
               </button>
               <button
                 type="button"
                 aria-pressed={done}
+                disabled={props.disabled}
                 aria-label={done ? `Set ${i + 1} done` : `Mark set ${i + 1} done`}
                 onClick={() => save({ done: !done })}
                 className={

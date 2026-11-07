@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   startSession,
   useCardio,
@@ -39,7 +39,23 @@ import {
 import { Disclosure, Media, Stepper, Warning } from './ui'
 import { useQueryClient } from '@tanstack/react-query'
 
+function useOnline() {
+  const [online, setOnline] = useState(() => navigator.onLine)
+  useEffect(() => {
+    const on = () => setOnline(true)
+    const off = () => setOnline(false)
+    window.addEventListener('online', on)
+    window.addEventListener('offline', off)
+    return () => {
+      window.removeEventListener('online', on)
+      window.removeEventListener('offline', off)
+    }
+  }, [])
+  return online
+}
+
 export function PersonView({ person }: { person: Person }) {
+  const online = useOnline()
   const qc = useQueryClient()
   const sessions = useSessions(person)
   const states = useStates(person)
@@ -90,7 +106,7 @@ export function PersonView({ person }: { person: Person }) {
   const warmup = WARMUPS[person][day.kind]
   const sets = setLogs.data ?? []
 
-  const offline = sessions.isError || states.isError || (typeof navigator !== 'undefined' && !navigator.onLine)
+  const offline = !online || sessions.isError || states.isError
 
   return (
     <div className="space-y-4">
@@ -168,6 +184,7 @@ export function PersonView({ person }: { person: Person }) {
             state={states.data?.[k]}
             sets={sets.filter((s) => s.key === k)}
             healing={healing}
+            disabled={offline}
             onVariant={(v) => setChoice.mutate({ slot_key: slot.id, variant: v })}
             onState={(s) => saveState.mutate(s)}
             onSet={onSet}
@@ -179,7 +196,7 @@ export function PersonView({ person }: { person: Person }) {
 
       <button
         type="button"
-        disabled={!active || finish.isPending}
+        disabled={!active || finish.isPending || offline}
         onClick={() =>
           active &&
           finish.mutate({ session: active, states: states.data ?? {}, choices: choices.data ?? {} }, { onSuccess: () => setOverride(null) })
@@ -296,7 +313,7 @@ function ProgramInfo({ person, healing }: { person: Person; healing: boolean }) 
 function Cardio({ person, dayId, healing, sessionId }: { person: Person; dayId: DayId; healing: boolean; sessionId: string | null }) {
   const log = useLogCardio(person)
   const history = useCardio(person)
-  const [kind, setKind] = useState<CardioKind>('int-4x4')
+  const [kind, setKind] = useState<CardioKind>(healing ? 'easy' : 'int-4x4')
   const [minutes, setMinutes] = useState(25)
   const plan = EMILY_CARDIO[dayId]
   const today = localDate()
@@ -306,12 +323,15 @@ function Cardio({ person, dayId, healing, sessionId }: { person: Person; dayId: 
   return (
     <section className="rounded-2xl border border-line bg-panel p-4">
       <div className="text-xs font-semibold tracking-widest text-dim uppercase">Cardio</div>
-      <div className="mt-1 text-xl font-bold">{plan.label}</div>
+      <div className="mt-1 text-xl font-bold">{healing && plan.hard ? 'Easy run (intervals on hold)' : plan.label}</div>
       {isSunday(today) && <div className="text-sm text-dim">Sunday: {SUNDAY_CARDIO}</div>}
-      {plan.hard && <div className="mt-1 text-sm text-dim">Max 2–3 hard sessions a week.</div>}
+      {plan.hard && !healing && <div className="mt-1 text-sm text-dim">Max 2–3 hard sessions a week.</div>}
+      {healing && (
+        <div className="mt-1 text-sm text-dim">Healing mode: all intervals paused. When they come back, 4×4 first, sprints last.</div>
+      )}
       <div className="mt-3 space-y-2" role="radiogroup" aria-label="Cardio type">
         {CARDIO_OPTIONS.map((o) => {
-          const blocked = healing && o.sprint
+          const blocked = healing && o.id.startsWith('int-')
           return (
             <button
               key={o.id}

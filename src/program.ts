@@ -529,8 +529,8 @@ export const GLOBAL_NOTES: Record<Person, string[]> = {
 }
 
 export const HEALING_NOTES = [
-  'Healing mode: no AMRAP sets (last set is a normal set) and no sprint intervals.',
-  'Turn it off once getting out of bed, coughing and sneezing have been pain-free for ~2 weeks. Then bring back AMRAP first, then full side planks, then sprints, one at a time.',
+  'Healing mode: no AMRAP sets (last set is a normal set) and no hard intervals; easy runs only.',
+  'Turn it off once getting out of bed, coughing and sneezing have been pain-free for ~2 weeks. Then bring back AMRAP first, then full side planks, then 4×4 intervals, then sprints, one at a time.',
 ]
 
 export type DoctorBox = { title: string; items: string[]; urgent?: string[] }

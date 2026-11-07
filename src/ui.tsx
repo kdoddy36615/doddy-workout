@@ -8,21 +8,22 @@ export function Stepper(props: {
   onChange: (v: number) => void
   unit?: string
   big?: boolean
+  disabled?: boolean
 }) {
-  const { value, step, min = 0, onChange, unit, big } = props
+  const { value, step, min = 0, onChange, unit, big, disabled } = props
   const btn =
-    'grid place-items-center rounded-xl bg-panel-2 text-2xl font-semibold text-ink active:bg-line select-none ' +
+    'grid place-items-center rounded-xl bg-panel-2 text-2xl font-semibold text-ink active:bg-line select-none disabled:opacity-40 ' +
     (big ? 'size-14' : 'size-12')
   return (
     <div className="flex items-center gap-2">
-      <button type="button" aria-label="Decrease" className={btn} onClick={() => onChange(Math.max(min, +(value - step).toFixed(2)))}>
+      <button type="button" disabled={disabled} aria-label="Decrease" className={btn} onClick={() => onChange(Math.max(min, +(value - step).toFixed(2)))}>
         −
       </button>
       <div className={'min-w-[4.5ch] text-center font-bold tabular-nums ' + (big ? 'text-4xl' : 'text-2xl')}>
         {formatWeight(value)}
         {unit && <span className="ml-1 text-sm font-medium text-dim">{unit}</span>}
       </div>
-      <button type="button" aria-label="Increase" className={btn} onClick={() => onChange(+(value + step).toFixed(2))}>
+      <button type="button" disabled={disabled} aria-label="Increase" className={btn} onClick={() => onChange(+(value + step).toFixed(2))}>
         +
       </button>
     </div>
