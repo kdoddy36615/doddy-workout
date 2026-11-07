@@ -11,7 +11,7 @@ import {
   type Slot,
   type SlotPerson,
 } from './program'
-import { Disclosure, Media, Stepper, Warning } from './ui'
+import { Disclosure, Media, restartRest, Stepper, Warning } from './ui'
 
 const UNIT: Record<Load, string> = { barbell: 'lb', dumbbell: 'lb / DB', machine: 'lb', bodyweight: '' }
 
@@ -151,7 +151,10 @@ export function ExerciseCard(props: {
                 aria-pressed={done}
                 disabled={props.disabled}
                 aria-label={done ? `Set ${i + 1} done` : `Mark set ${i + 1} done`}
-                onClick={() => save({ done: !done })}
+                onClick={() => {
+                  if (!done) restartRest()
+                  save({ done: !done })
+                }}
                 className={
                   'ml-auto grid h-12 w-16 place-items-center rounded-xl text-2xl font-black ' +
                   (done ? 'bg-accent text-accent-ink' : 'border-2 border-line text-faint')

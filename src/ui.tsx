@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { formatWeight } from './logic'
 
 export function Stepper(props: {
@@ -80,12 +80,31 @@ export function Media({ src, alt }: { src: string; alt: string }) {
   )
 }
 
-/** Small count-up clock. Tap to start, tap again to stop. */
+// ---------------------------------------------------------------------------
+// Rest timer. All the "when does it start" rules live here so they're easy to change.
+//   - Checking off a set (✓) calls restartRest(): starts it, or resets to 0:00 if running.
+//   - The clock button toggles it manually.
+// ---------------------------------------------------------------------------
+let restStart: number | null = null
+const listeners = new Set<() => void>()
+const setRest = (v: number | null) => {
+  restStart = v
+  listeners.forEach((l) => l())
+}
+export const restartRest = () => setRest(Date.now())
+const toggleRest = () => setRest(restStart == null ? Date.now() : null)
+const subscribe = (l: () => void) => {
+  listeners.add(l)
+  return () => listeners.delete(l)
+}
+
+/** Small count-up clock in the header. */
 export function RestTimer() {
-  const [start, setStart] = useState<number | null>(null)
-  const [now, setNow] = useState(0)
+  const start = useSyncExternalStore(subscribe, () => restStart)
+  const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
     if (start == null) return
+    // no immediate setNow: a stale `now` is before the new start, so it clamps to 0:00
     const id = setInterval(() => setNow(Date.now()), 250)
     return () => clearInterval(id)
   }, [start])
@@ -96,11 +115,7 @@ export function RestTimer() {
   return (
     <button
       type="button"
-      onClick={() => {
-        const t = Date.now()
-        setNow(t)
-        setStart(running ? null : t)
-      }}
+      onClick={toggleRest}
       className={
         'flex h-10 items-center gap-1.5 rounded-full px-3 text-sm font-semibold tabular-nums ' +
         (running ? 'bg-accent text-accent-ink' : 'bg-panel-2 text-dim')
