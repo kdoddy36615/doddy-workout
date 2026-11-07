@@ -36,7 +36,7 @@ import {
   type DayId,
   type Person,
 } from './program'
-import { Disclosure, Stepper, Warning } from './ui'
+import { Disclosure, Media, Stepper, Warning } from './ui'
 import { useQueryClient } from '@tanstack/react-query'
 
 export function PersonView({ person }: { person: Person }) {
@@ -136,10 +136,20 @@ export function PersonView({ person }: { person: Person }) {
       {warmup && (
         <section className="rounded-2xl border border-line bg-panel px-4">
           <Disclosure label="Warm-up" defaultOpen={false}>
-            <ul className="list-disc space-y-1 pl-5 text-sm text-ink/90">
-              {warmup.map((w) => (
-                <li key={w}>{w}</li>
-              ))}
+            <ul className="space-y-1">
+              {warmup.map((w) =>
+                w.media ? (
+                  <li key={w.text} className="rounded-lg bg-panel-2/60 px-3">
+                    <Disclosure label={<span className="font-medium text-ink/90">{w.text}</span>}>
+                      <Media src={w.media} alt={`${w.text} form`} />
+                    </Disclosure>
+                  </li>
+                ) : (
+                  <li key={w.text} className="px-3 py-3 text-sm text-ink/90">
+                    {w.text}
+                  </li>
+                ),
+              )}
             </ul>
           </Disclosure>
         </section>

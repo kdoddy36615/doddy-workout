@@ -77,19 +77,19 @@ export const EXERCISES: Record<string, Exercise> = Object.fromEntries(
   [
     ex({ id: 'bench', name: 'Bench press', load: 'barbell', media: '/media/bench-press.mp4',
       cues: ['Shoulder blades pulled back and down, slight arch', 'Elbows ~45° from your sides, not flared', 'Touch lower chest, press back up over shoulders'] }),
-    ex({ id: 'neutral-db-bench', name: 'Neutral-grip DB bench', load: 'dumbbell',
+    ex({ id: 'neutral-db-bench', name: 'Neutral-grip DB bench', load: 'dumbbell', media: '/media/neutral-db-bench.mp4',
       cues: ['Palms facing each other', 'Lower until elbows are about level with your torso'] }),
-    ex({ id: 'floor-press', name: 'Floor press', load: 'barbell',
+    ex({ id: 'floor-press', name: 'Floor press', load: 'barbell', media: '/media/floor-press.mp4',
       cues: ['Lie on the floor in the rack', 'Lower until upper arms touch the floor, pause, press', 'Shorter range = less stretch on the front of the shoulder'] }),
     ex({ id: 'machine-shoulder-press', name: 'Machine shoulder press', load: 'machine',
       cues: ['Use the neutral (palms-in) handles if the machine has them', 'Seat so handles start at shoulder height', 'Press only through the pain-free range'] }),
-    ex({ id: 'incline-bench', name: 'Incline barbell bench (30–45°)', load: 'barbell',
+    ex({ id: 'incline-bench', name: 'Incline barbell bench (30–45°)', load: 'barbell', media: '/media/incline-bench.mp4',
       cues: ['Bench at 30–45°, not steeper', 'Touch upper chest, elbows slightly tucked'] }),
     ex({ id: 'seated-db-press', name: 'Seated DB shoulder press (neutral grip)', load: 'dumbbell', media: '/media/seated-db-press.mp4',
       cues: ['Back against an upright bench', 'Palms facing each other', 'Brace lightly, exhale as you press'] }),
-    ex({ id: 'standing-db-press', name: 'Standing DB shoulder press', load: 'dumbbell',
-      cues: ['Squeeze glutes, ribs down', 'Exhale through the press'] }),
-    ex({ id: 'cable-y-raise', name: 'Cable Y-raise', load: 'machine',
+    ex({ id: 'standing-db-press', name: 'Standing single-arm DB press', load: 'dumbbell', media: '/media/standing-db-press.mp4', perSide: true,
+      cues: ['One DB, free hand on your hip', 'Squeeze glutes, ribs down, don’t lean away', 'Exhale through the press'] }),
+    ex({ id: 'cable-y-raise', name: 'Cable Y-raise', load: 'machine', media: '/media/cable-y-raise.mp4',
       cues: ['Light weight, thumbs up', 'Raise in a Y only as high as is pain-free'] }),
     ex({ id: 'incline-db-press', name: 'Incline DB press', load: 'dumbbell', media: '/media/incline-db-press.mp4',
       cues: ['Bench at 15–30° (low incline)', 'Lower until elbows are level with your torso'] }),
@@ -102,11 +102,11 @@ export const EXERCISES: Record<string, Exercise> = Object.fromEntries(
       cues: ['Bar over mid-foot, shins close', 'Brace, push the floor away', 'Hips and shoulders rise together, lock out with glutes'] }),
     ex({ id: 'barbell-row', name: 'Barbell row', load: 'barbell', media: '/media/barbell-row.mp4',
       cues: ['Overhand grip', 'Hinge to ~45°, pull to lower chest', 'No jerking with the hips'] }),
-    ex({ id: 'chest-supported-row', name: 'Chest-supported row', load: 'dumbbell',
+    ex({ id: 'chest-supported-row', name: 'Chest-supported row', load: 'dumbbell', media: '/media/chest-supported-row.mp4',
       cues: ['Chest on an incline bench', 'Pull elbows back, squeeze shoulder blades'] }),
     ex({ id: 'lat-pulldown', name: 'Lat pulldown', load: 'machine', media: '/media/lat-pulldown.mp4',
       cues: ['Overhand grip, a bit wider than shoulders', 'Pull to upper chest, chest up'] }),
-    ex({ id: 'neutral-pulldown', name: 'Neutral-grip pulldown', load: 'machine',
+    ex({ id: 'neutral-pulldown', name: 'Neutral-grip pulldown', load: 'machine', media: '/media/neutral-pulldown.mp4',
       cues: ['Palms-facing handle (V-bar or parallel grip)', 'Pull to upper chest'] }),
     ex({ id: 'seated-cable-row', name: 'Seated cable row', load: 'machine', media: '/media/seated-cable-row.mp4',
       cues: ['Sit tall, pull to belly button', 'Squeeze shoulder blades, slow return'] }),
@@ -114,20 +114,20 @@ export const EXERCISES: Record<string, Exercise> = Object.fromEntries(
       cues: ['Rope at upper-chest height', 'Pull to chin/nose, elbows at or below shoulder height'] }),
     ex({ id: 'db-curl', name: 'Dumbbell curl', load: 'dumbbell', media: '/media/db-curl.mp4',
       cues: ['Elbows at your sides, no swinging'] }),
-    ex({ id: 'hammer-curl', name: 'Hammer curl', load: 'dumbbell',
+    ex({ id: 'hammer-curl', name: 'Hammer curl', load: 'dumbbell', media: '/media/hammer-curl.mp4',
       cues: ['Palms facing each other', 'Elbows at your sides'] }),
     ex({ id: 'bird-dog', name: 'Bird dog', load: 'bodyweight', media: '/media/bird-dog.mp4', perSide: true,
       cues: ['On hands and knees, opposite arm and leg out', 'Keep hips level, move slowly'] }),
     ex({ id: 'side-plank', name: 'Side plank', load: 'bodyweight', media: '/media/side-plank.mp4', perSide: true, timed: true,
       cues: ['Elbow under shoulder, body in a straight line'] }),
-    ex({ id: 'kneeling-side-plank', name: 'Kneeling side plank', load: 'bodyweight', perSide: true, timed: true,
+    ex({ id: 'kneeling-side-plank', name: 'Kneeling side plank', load: 'bodyweight', media: '/media/kneeling-side-plank.mp4', perSide: true, timed: true,
       cues: ['Knees bent, hips lifted', 'Shorter lever = less load on the waist'] }),
 
     ex({ id: 'back-squat', name: 'Back squat', load: 'barbell', media: '/media/back-squat.mp4',
       cues: ['High bar, comfortable grip width', 'Set the safety pins just above parallel as a depth marker', 'Control the way down, no bouncing'] }),
     ex({ id: 'goblet-squat', name: 'Goblet squat', load: 'dumbbell', media: '/media/goblet-squat.mp4',
       cues: ['Hold one DB at your chest', 'Sit between your heels, chest up'] }),
-    ex({ id: 'bench-box-squat', name: 'Bar squat to bench', load: 'barbell',
+    ex({ id: 'bench-box-squat', name: 'Bar squat to bench', load: 'barbell', media: '/media/bench-box-squat.mp4',
       cues: ['Flat bench behind you in the rack', 'Sit back until you lightly touch, then stand'] }),
     ex({ id: 'rdl', name: 'Romanian deadlift', load: 'barbell', media: '/media/rdl.mp4',
       cues: ['Soft knees, push hips back', 'Bar close to legs, lower to mid-shin', 'Flat back, no bouncing'] }),
@@ -139,7 +139,7 @@ export const EXERCISES: Record<string, Exercise> = Object.fromEntries(
       cues: ['On the leg press or a step (0 lb = bodyweight)', 'Full stretch at the bottom, pause at the top'] }),
     ex({ id: 'dead-bug', name: 'Dead bug', load: 'bodyweight', media: '/media/dead-bug.mp4', perSide: true,
       cues: ['Low back pressed into the floor', 'Opposite arm and leg, one side at a time'] }),
-    ex({ id: 'heel-tap-dead-bug', name: 'Dead bug: bent-knee heel taps', load: 'bodyweight', perSide: true,
+    ex({ id: 'heel-tap-dead-bug', name: 'Dead bug: bent-knee heel taps', load: 'bodyweight', media: '/media/heel-tap-dead-bug.mp4', perSide: true,
       cues: ['Knees bent 90°, tap one heel to the floor at a time', 'Low back stays down'] }),
     ex({ id: 'pallof-press', name: 'Pallof press', load: 'machine', media: '/media/pallof-press.mp4', perSide: true,
       cues: ['Stand side-on to the cable', 'Press straight out and resist the twist'] }),
@@ -465,25 +465,22 @@ export const DAYS: Record<DayId, Day> = {
 // Warm-ups, cardio, program info
 // ---------------------------------------------------------------------------
 
-export const WARMUPS: Record<Person, Partial<Record<DayKind, string[]>>> = {
+export type WarmupItem = { text: string; media?: string }
+const W = (text: string, media?: string): WarmupItem => ({ text, media })
+const PULL_APART = W('Band pull-aparts 2x15', '/media/warmup-pull-apart.mp4')
+const EXT_ROT = W('Band external rotations 2x15 per arm', '/media/warmup-external-rotation.mp4')
+const BICEPS_ISO = W('Biceps isometric: hold a light curl at 90°, 2x30s')
+
+export const WARMUPS: Record<Person, Partial<Record<DayKind, WarmupItem[]>>> = {
   kevin: {
-    push: [
-      'Band pull-aparts 2x15',
-      'Band external rotations 2x15 per arm',
-      'Biceps isometric: hold a light curl at 90°, 2x30s',
-      '2–3 ramp-up sets before the main lift',
-    ],
-    pull: [
-      'Band pull-aparts 2x15',
-      'Band external rotations 2x15 per arm',
-      'Biceps isometric: hold a light curl at 90°, 2x30s',
-    ],
+    push: [PULL_APART, EXT_ROT, BICEPS_ISO, W('2–3 ramp-up sets before the main lift')],
+    pull: [PULL_APART, EXT_ROT, BICEPS_ISO],
     legs: [
-      '5 min easy upright bike or incline walk',
-      'Glute bridges 2x10',
-      '90/90 hip switches 2x8 per side',
-      'Bodyweight squats to your working depth 1x10',
-      'No hard static hip-flexor stretching before lifting',
+      W('5 min easy upright bike or incline walk'),
+      W('Glute bridges 2x10', '/media/warmup-glute-bridge.mp4'),
+      W('90/90 hip switches 2x8 per side', '/media/warmup-9090.mp4'),
+      W('Bodyweight squats to your working depth 1x10'),
+      W('No hard static hip-flexor stretching before lifting'),
     ],
   },
   emily: {},
