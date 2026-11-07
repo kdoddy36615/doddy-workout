@@ -326,3 +326,50 @@ export function useFinish(person: Person) {
 export function stateDefaults(k: string, weight: number): Omit<ExerciseState, 'person'> {
   return { key: k, weight, fails: 0, suggested: null, step: null, setup_note: null, ups: 0, calibrated: false }
 }
+
+// ---------------------------------------------------------------------------
+// Nutrition
+// ---------------------------------------------------------------------------
+
+export function useWeighIns(person?: Person) {
+  return useQuery({
+    queryKey: ['weighins', person ?? 'all'],
+    queryFn: async () => {
+      let q = supabase.from('weigh_ins').select('person, date, weight').order('date')
+      if (person) q = q.eq('person', person)
+      const rows = await must<{ person: Person; date: string; weight: number }[]>(q)
+      return rows.map((r) => ({ ...r, weight: Number(r.weight) }))
+    },
+  })
+}
+
+export function useLogWeighIn(person: Person) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (weight: number) => {
+      await must(supabase.from('weigh_ins').upsert({ person, date: localDate(), weight }))
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['weighins'] }),
+  })
+}
+
+export function useKcalAdjust(person: Person) {
+  return useQuery({
+    queryKey: ['kcal', person],
+    queryFn: async () => {
+      const rows = await must<{ kcal_adjust: number }[]>(supabase.from('person_settings').select('kcal_adjust').eq('person', person))
+      return rows[0]?.kcal_adjust ?? 0
+    },
+  })
+}
+
+export function useSetKcalAdjust(person: Person) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (value: number) => {
+      await must(supabase.from('person_settings').update({ kcal_adjust: value }).eq('person', person))
+    },
+    onMutate: (value) => qc.setQueryData(['kcal', person], value),
+    onSettled: () => qc.invalidateQueries({ queryKey: ['kcal', person] }),
+  })
+}

@@ -15,6 +15,7 @@ import {
   type SetLog,
 } from './db'
 import { ExerciseCard } from './ExerciseCard'
+import { NutritionCard } from './NutritionCard'
 import { RunPlan } from './RunPlan'
 import { isSunday, lastDates, localDate, nextDay } from './logic'
 import {
@@ -222,6 +223,8 @@ export function PersonView({ person }: { person: Person }) {
         {finish.isPending ? 'Saving…' : active ? `Finish ${day.name}` : 'Log a set to start'}
       </button>
       {finish.isError && <div className="text-sm text-danger">Couldn’t save. Try again.</div>}
+
+      <NutritionCard person={person} healing={healing} disabled={offline} />
     </div>
   )
 }
